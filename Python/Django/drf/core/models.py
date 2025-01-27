@@ -8,5 +8,6 @@ class User(models.Model):
     address = models.CharField(max_length=400,blank=False)
     phonenumber = models.IntegerField(blank=False,unique=True)
 
-
-
+class legal_info(models.Model):
+    pan_number = models.IntegerField(blank=False)
+    citizenship_number = models.IntegerField(blank=False)
