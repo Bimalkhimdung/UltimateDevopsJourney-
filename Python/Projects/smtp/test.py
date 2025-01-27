@@ -5,8 +5,8 @@ from email.mime.multipart import MIMEMultipart
 # AWS SES SMTP configuration
 smtp_server = "email-smtp.us-east-1.amazonaws.com"  # Replace with your AWS SES SMTP endpoint
 smtp_port = 587  # Use 465 for SSL or 587 for STARTTLS
-aws_access_key = "AKIAQAFGKCS7UIMR53XU"  # Replace with your AWS SMTP username
-aws_secret_key = "BEDzS9y48HJF0jg0+sifogVBGH87lR4XpSKtm6kdEGZ9"  # Replace with your AWS SMTP password
+aws_access_key = ""  # Replace with your AWS SMTP username
+aws_secret_key = ""  # Replace with your AWS SMTP password
 
 # Email details
 sender_email = "bimalkhimdung@gmail.com"  # Verified email address in AWS SES

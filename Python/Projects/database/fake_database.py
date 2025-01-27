@@ -7,9 +7,9 @@ fake = Faker()
 # --- Database Connection ---
 def connect_to_db():
     return psycopg2.connect(
-        dbname="demo_test",
-        user="demo",
-        password="eR7qQljRNnOjuzYF2RgQ",
+        dbname = "shikhar",
+        user = "",
+        password = "",
         host="localhost",
         port="5432"
     )

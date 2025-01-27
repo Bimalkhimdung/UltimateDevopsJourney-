@@ -1,7 +1,7 @@
 import psycopg2
 
 db_connection = psycopg2.connect(
-        dbname = "test_sht",
+        dbname = "shikhar",
         user = "shikhar_insurance_user",
         password = "Al1*+1IJSJA92Fd3",
         host = "localhost"
