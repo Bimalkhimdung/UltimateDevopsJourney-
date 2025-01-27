@@ -1,0 +1,237 @@
+#ansible-playbook -i inventory version_update_shikharinsurance-uat.yml --extra-vars '{"be_tag:"", "fe_tag":"","client_name":"" "}'
+---
+- name: Action for Building app-compile and Dist on be_tag {{be_tag}} and Fe_tag {{ fe_tag }}
+  hosts: host_build
+  gather_facts: no
+  become: yes
+  become_user: build
+
+  vars:
+    work_dir: "/home/build/aayulogic"
+    be_dir: "{{ work_dir }}/irealhrsoft-backend"
+    fe_dir: "{{work_dir}}/irhrs-frontend"
+    python_dir: "{{ be_dir }}/realhrsoft/bin/python"
+    git_dir: "/usr/bin/git"
+    yarn_dir: "/home/build/.nvm/versions/node/v16.18.0/bin/yarn"
+    current_date: "{{ lookup('pipe', 'date +%d%m%Y') }}"
+
+  tasks:
+
+    - name: Clean old app-compile files and .7z archives
+      ansible.builtin.find:
+        paths: "{{ be_dir }}"
+        patterns: ["app-compile", "*.7z"]
+      register: old_files
+
+    - name: Remove old app-compile and archive files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_files.files }}"
+      when: old_files.matched > 0
+    - ansible.builtin.command:
+        cmd: "git checkout master"
+      args:
+        chdir: "{{ be_dir }}"
+     
+    - ansible.builtin.command:
+        cmd: "git pull"
+      args:
+        chdir: "{{ be_dir }}"
+    - name: Checkout target branch "{{ be_tag }}"
+      ansible.builtin.command:
+        cmd: "git checkout {{ be_tag }}"
+      args:
+        chdir: "{{ be_dir }}"
+
+    - name: Pull latest changes for "{{ be_tag }}"
+      ansible.builtin.command:
+        cmd: "git pull origin {{ be_tag }}"
+      args:
+        chdir: "{{ be_dir }}"
+
+    - name: Build app-compile for you, Please be Patience.. 
+      ansible.builtin.command:
+        cmd: "{{ python_dir }} setup.py build_ext -j11 --inplace"
+      args:
+        chdir: "{{ be_dir }}"
+    - command: "rm app_compile_{{ current_date }}.7z chdir={{ be_dir }}"
+      ignore_errors: yes
+
+    - name: Compress the app-compile folder 
+      command: "/usr/bin/7z a app_compile_{{ current_date}}.7z app-compile chdir={{ be_dir }}"
+    - name: Fetch the app_compile archive to local
+      ansible.builtin.synchronize:
+        src: "{{ be_dir }}/app_compile_{{ current_date }}.7z"
+        dest: "/tmp"
+        mode: pull
+
+    - ansible.builtin.debug:
+        msg: "Successfully Build app-compile on branch: {{ be_tag }} at {{ current_date }}"
+ 
+ #Frontend Build
+    - name: Delete old dist files
+      shell: "rm -rf dist* chdir={{ fe_dir }}"
+       
+    - name: Git checkout stage
+      command: "{{ git_dir }} checkout stage chdir={{ fe_dir}}"
+    - name: Git Pull
+      command: "{{ git_dir }} pull chdir={{ fe_dir }}"
+
+    - name: Git checkout  {{ fe_tag }} Branch.
+      command: "{{ git_dir }} checkout {{ fe_tag }}  chdir={{ fe_dir }}"
+
+    - name: Git Pull {{ fe_tag }}
+      command: "{{ git_dir }} pull origin {{ fe_tag }} chdir={{ fe_dir }}"
+
+    - name: Set client_name for Build Dist file
+      ansible.builtin.lineinfile:
+          path: "{{ fe_dir }}/.env"
+          regexp: '^VUE_APP_CLIENT='
+          line: "VUE_APP_CLIENT='realhr'"
+          create: yes
+    - name: Yarn Install
+      shell: |
+        source /home/build/.nvm/nvm.sh
+        yarn
+      args:
+        chdir: "{{ fe_dir }}"
+        executable: /bin/bash
+    - name: Building Dist file for you, Please Be Patience..!!
+      shell: |
+        source /home/build/.nvm/nvm.sh
+        yarn build -j12 
+      args:
+        chdir: "{{ fe_dir }}"
+        executable: /bin/bash
+
+    - name: Making Zip file
+      command: "/usr/bin/7z a dist_{{ current_date }}.7z dist chdir={{ fe_dir }} "
+    - name: Fetching  dist to local 
+      ansible.builtin.synchronize:
+          src: "{{ fe_dir }}/dist_{{ current_date }}.7z"
+          dest: "/tmp"
+          mode: pull
+
+    - ansible.builtin.debug:
+        msg: "Building dist on {{ client_name}} at {{ current_date }} successful"  
+- name: Sending files to {{ client_name }}
+  hosts: "{{ host }}"
+  gather_facts: no
+  vars:
+    current_date: "{{ lookup ('pipe', 'date +%d%m%Y')}}"
+  tasks:
+    - name: Sending dist to server
+      ansible.builtin.copy:
+        src: /tmp/dist_{{ current_date }}.7z
+        dest: /tmp
+        mode: '0644'
+    - ansible.builtin.debug:
+        msg: "Successfully Sent dist file to server"         
+- name: Sending files to {{ client_name }}
+  hosts: "{{ host }}"
+  gather_facts: no
+  vars:
+    current_date: "{{ lookup ('pipe', 'date +%d%m%Y')}}"
+  tasks:        
+    - name: Sending app-compile to server
+      ansible.builtin.copy:
+        src: /tmp/app_compile_{{ current_date }}.7z
+        dest: /tmp
+        mode: '0644'         
+    - ansible.builtin.debug:
+        msg: "Successfully Sent app-compile file to server"     
+- name: Removing dist and app-compile
+  hosts: localhost
+  gather_facts: no
+  vars:
+    current_date: "{{ lookup ('pipe', 'date +%d%m%Y')}}"
+  tasks:
+    - name: Removing dist_{{ current_date }}
+      command: "rm -rf dist_{{ current_date }} chdir=/tmp"
+    - name: Removing app_compile_{{ current_date }}
+      command: "rm -rf app_compile_{{ current_date }} chdir=/tmp"      
+    - ansible.builtin.debug:
+        msg: "Successfully Removed dist_{{ current_date }} and app_compile_{{ current_date }} from Local Server"       
+- name: Updating on  Server with tag {{ be_tag }} & {{ fe_tag }}
+  hosts: "{{ host }}"
+  gather_facts: no
+  become: true
+  become_user: "{{ ansible_user }}"
+  vars:
+    work_dir: "/home/{{ ansible_user }}"
+    env_dir: "{{work_dir}}/{{ client_name }}-realhrsoft-backend"
+    be_dir: "{{ env_dir }}/app-compile"
+    fe_dir: "{{work_dir}}/{{ client_name }}-realhrsoft-frontend"
+    pip_dir: "{{ env_dir }}/bin/pip"
+    python_dir: "{{ env_dir }}/bin/python"
+    git_dir: "/usr/bin/git"
+    current_date: "{{ lookup('pipe','date +%d%m%Y') }}"
+
+  tasks:
+     - name: Stopping Backend/Qcluster Service
+       block:
+       - service: 
+           name: "{{ client_name}}-realhrsoft-backend"
+           state: stopped
+       - service:  
+          name: "{{ client_name}}-realhrsoft-qcluster"
+          state: stopped
+       become: yes
+       become_user: root 
+
+     - name: Preparing app-compile
+       command: "mv /tmp/app_compile_{{ current_date }}.7z {{ env_dir }} chdir={{ env_dir }}"
+
+     - name: Taking app-compile as backup 
+       command: "mv app-compile app-compile-bak-{{current_date}} chdir={{ env_dir }}"
+
+     - name: Preparing app-compile
+       shell: "/usr/bin/7z x app_compile_{{ current_date }}.7z chdir={{env_dir}}"
+
+     - name: Preparing app-compile
+       command: "cp -r app-compile-bak-{{current_date}}/key-files app-compile chdir={{ env_dir }}"
+
+     - name: Preparing app-compile
+       command: "cp app-compile-bak-{{current_date}}/.env app-compile chdir={{ env_dir }}"
+
+     - name: Make Migration
+       command: "{{ env_dir}}/bin/python manage.py migrate chdir={{ be_dir}}"
+       
+     - name: Setup Hrs permission
+       command: "{{ env_dir}}/bin/python manage.py setup_hrs_permissions chdir={{ be_dir }}"
+ 
+     - name: Backup Frontend
+       command: "mv {{ client_name }}-realhrsoft-frontend {{ client_name }}-realhrsoft-frontend-bak-{{current_date}} chdir={{ work_dir }}"
+ 
+     - name: Move frontend
+       command: "/usr/bin/mv /tmp/dist_{{ current_date }}.7z {{ work_dir }} chdir={{ work_dir }}"
+ 
+     - name: Extrating frontend
+       shell: "/usr/bin/7z x dist_{{ current_date }}.7z chdir={{ work_dir }}"
+ 
+     - name: Preparing Frontend for {{ client_name }}.realhrsoft.com
+       command: "mv dist {{ client_name }}-realhrsoft-frontend chdir={{ work_dir }}"
+ 
+     - name: Copy runtimeconfig file
+       command: "/usr/bin/cp {{ client_name }}-realhrsoft-frontend-bak-{{current_date}}/runtimeConfig.json {{ fe_dir }} chdir={{ work_dir }}"
+ 
+     - name: Remove Old Dist file
+       command: "rm -rf dist_{{ current_date }}.7z chdir={{ work_dir }}"
+ 
+     - name: Starting Backend/Qcluster Service
+       block:
+       - service: 
+           name: "{{ client_name}}-realhrsoft-backend"
+           state: restarted
+       - service:  
+          name: "{{ client_name }}-realhrsoft-qcluster"
+          state: restarted
+       - service: 
+           name: "nginx"
+           state: reloaded
+       become: yes
+       become_user: root
+     - ansible.builtin.debug:
+         msg: "Version Update on {{ client_name }}.realhrsoft.com with backend tag:{{ be_tag }} and  frontend tag:{{ fe_tag }} at {{ current_date }} successful"
+ 
