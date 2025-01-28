@@ -20,14 +20,16 @@ def connect_to_db():
         port="5432"
     )
 
-# Utility functions
+# function to fetch data from db
 def fetch_all(cursor, query):
     cursor.execute(query)
     return cursor.fetchall()
+#function to  update table
 
 def update_table(cursor, query, values):
     cursor.execute(query, values)
 
+#function to generate unique values
 def generate_unique_value(existing_set, generator_func):
     while True:
         value = generator_func()
@@ -35,7 +37,7 @@ def generate_unique_value(existing_set, generator_func):
             existing_set.add(value)
             return value
 
-# Fake data functions
+# fake username,email,firstname,middlename,lastname
 def fake_users_user(conn):
     with conn.cursor() as cursor:
         user_data = fetch_all(cursor, "SELECT id, username FROM users_user")
@@ -59,6 +61,8 @@ def fake_users_user(conn):
                 (fake_email, fake_first_name, fake_middle_name, fake_last_name, fake_username, user_id)
             )
         print("Fake data generated for users_user")
+
+#fake userlegal information        
 
 def fake_users_userlegalinfo(conn):
     with conn.cursor() as cursor:
@@ -86,6 +90,8 @@ def fake_users_userlegalinfo(conn):
                 )
             )
         print("Fake data generated for users_userlegalinfo!")
+
+#fake user contact details
 def fake_users_usercontactdetails(conn):
     with conn.cursor() as cursor:
         contact_data = fetch_all(cursor, "SELECT id, slug FROM users_usercontactdetail")
@@ -114,6 +120,7 @@ def fake_users_usercontactdetails(conn):
 
         print("Fake data generated for users_usercontactdetails!")
 
+#fake organization common bank
 def fake_common_bank(conn):
     with conn.cursor() as cursor:
         bank_data = fetch_all(cursor, "SELECT id, slug, name FROM common_bank")
@@ -137,6 +144,7 @@ def fake_common_bank(conn):
             )
         print("Fake data generated for common_bank!")
 
+# ----- fake userbank details
 def fake_users_userbank(conn):
     with conn.cursor() as cursor:
         bank_data = fetch_all(cursor, "SELECT id, account_number FROM users_userbank")
@@ -168,6 +176,7 @@ def delete_common_smtpserver(conn):
         except Exception as e:
            print(f"Error deleting data from common_smtpserver: {e}")
 
+# --- Update superuser details for user login ---
 def update_superuser(conn):
     with conn.cursor() as cursor:
         superusers = fetch_all(cursor, "SELECT id FROM users_user WHERE is_superuser = TRUE")
@@ -186,7 +195,8 @@ def update_superuser(conn):
             except psycopg2.Error as e:
                 print(f"Failed to update superuser {user_id}: {e}")
 
-# Main function
+
+# main function call 
 if __name__ == "__main__":
     try:
         with connect_to_db() as conn:
