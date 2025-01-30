@@ -6,4 +6,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['user_id','firstname','middlename','lastname','address','phonenumber']
 
-        
+class LeganinfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = legal_info
+        fields = ['pan_number','citizenship_number']

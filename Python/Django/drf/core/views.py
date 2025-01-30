@@ -10,5 +10,5 @@ def user(request):
 
 @api_view(['GET'])
 def legal_info(request):
-        legal_details = legal_info.objects.all().values()
-        return Response(list(legal_details))
+        
+        return Response({'legal_details = legal_info.objects.all().values()'})

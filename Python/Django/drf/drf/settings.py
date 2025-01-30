@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'rest_framework',
-    'django_extensions'
+    'django_extensions',
+    'bmi_calulator'
 ]
 SHELL_PLUS = "ipython"
 
