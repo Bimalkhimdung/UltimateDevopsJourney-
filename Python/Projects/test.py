@@ -1,14 +1,14 @@
-import requests
+from yt_dlp import YoutubeDL
 
-url = "http://localhost:11415/api/generate"
+def Download(link):
+    ydl_opts = {}
+    with YoutubeDL(ydl_opts) as ydl:
+        try:
+            ydl.download([link])
+        except Exception as e:
+            print(f"An error has occurred: {e}")
+        else:
+            print("Download is completed successfully")
 
-data = {
-    "model": "deepseek/deepseek-r1",
-    "prompt": "Explain black holes in simple terms.",
-    "stream": False
-}
-
-response = requests.post(url, json=data)
-result = response.json()
-
-print(result["response"]) 
+link = input("Enter the YouTube video URL: ")
+Download(link)
