@@ -41,10 +41,10 @@ def download_video(request):
                 with YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
                 logger.info(f"Download completed successfully for: {url}")
-                message = f"✅ Download Complete: {url}\n📂 Saved to {download_path}"
+                message = f"Download Complete: {url}\n📂 Saved to {download_path}"
             except Exception as e:
                 logger.error(f"Error occurred during download: {str(e)}")
-                message = f"❌ Error: {str(e)}"
+                message = f"Error: {str(e)}"
     else:
         form = YouTubeDownloadForm()
 
